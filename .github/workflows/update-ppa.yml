@@ -102,11 +102,12 @@ jobs:
       - name: Import GPG signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
           echo "${GPG_PRIVATE_KEY}" | base64 -d | gpg --batch --import
-          # Mark the key as ultimately trusted so gpg doesn't complain
-          echo "${GPG_KEY_ID}:6:" | gpg --import-ownertrust
+          # Derive the fingerprint from the imported key (strips any spaces the
+          # secret may contain) and mark it as ultimately trusted.
+          FINGERPRINT=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+          echo "${FINGERPRINT}:6:" | gpg --import-ownertrust
 
       - name: Create orig tarball
         env:
