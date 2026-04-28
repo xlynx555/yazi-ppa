@@ -1,2 +1,2 @@
 # git-build-recipe format 0.4 deb-version {debupstream}
-lp:~LAUNCHPAD_USER/+git/yazi-ppa
+lp:~den-leschenko/+git/yazi-ppa main
