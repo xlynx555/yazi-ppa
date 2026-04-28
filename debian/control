@@ -1,0 +1,37 @@
+Source: yazi
+Section: utils
+Priority: optional
+Maintainer: Den Leschenko <den.leschenko@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://yazi-rs.github.io
+Vcs-Browser: https://github.com/sxyazi/yazi
+Rules-Requires-Root: no
+
+Package: yazi
+Architecture: amd64 arm64
+Depends: ${misc:Depends}, file
+Recommends: ffmpeg,
+            7zip | p7zip-full,
+            jq,
+            poppler-utils,
+            fd-find | fd,
+            ripgrep,
+            fzf,
+            zoxide,
+            imagemagick
+Suggests: xclip | wl-clipboard | xsel
+Description: Blazing fast terminal file manager written in Rust
+ Yazi is a terminal file manager written in Rust, based on non-blocking
+ async I/O. It aims to provide an efficient, user-friendly, and customizable
+ file management experience.
+ .
+ Key features:
+  - Full asynchronous support powered by the Tokio runtime
+  - Built-in image preview (Kitty, iTerm2, Sixel, WezTerm, and more)
+  - Syntax highlighting for source code files
+  - Lua 5.5 plugin system for UI and functional customization
+  - Virtual filesystem supporting remote files via SFTP
+  - Integration with ripgrep, fd, fzf, and zoxide
+  - Vim-like keybindings, multi-tab support, cross-directory selection
+  - Bulk rename, archive extraction, and Git integration

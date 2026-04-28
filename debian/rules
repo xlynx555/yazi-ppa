@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+include /usr/share/dpkg/architecture.mk
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+
+override_dh_auto_build:
+	case "$(DEB_HOST_ARCH)" in \
+		amd64) unzip -o yazi-x86_64-unknown-linux-musl.zip ;; \
+		arm64) unzip -o yazi-aarch64-unknown-linux-musl.zip ;; \
+		*) echo "Unsupported architecture: $(DEB_HOST_ARCH)" >&2; exit 1 ;; \
+	esac
+
+override_dh_auto_install:
+	set -e; \
+	case "$(DEB_HOST_ARCH)" in \
+		amd64) BINDIR=yazi-x86_64-unknown-linux-musl ;; \
+		arm64) BINDIR=yazi-aarch64-unknown-linux-musl ;; \
+		*) echo "Unsupported architecture: $(DEB_HOST_ARCH)" >&2; exit 1 ;; \
+	esac; \
+	install -D -m 0755 $$BINDIR/yazi debian/yazi/usr/bin/yazi; \
+	install -D -m 0755 $$BINDIR/ya debian/yazi/usr/bin/ya; \
+	[ -f $$BINDIR/yazi.1 ] && install -D -m 0644 $$BINDIR/yazi.1 debian/yazi/usr/share/man/man1/yazi.1 || true; \
+	[ -f $$BINDIR/ya.1 ] && install -D -m 0644 $$BINDIR/ya.1 debian/yazi/usr/share/man/man1/ya.1 || true
+
+override_dh_auto_test:
+
+override_dh_strip:
+	# Upstream ships statically linked musl binaries — strip is not applicable
+
+override_dh_dwz:
+	# Upstream ships statically linked musl binaries — dwz is not applicable
+
+override_dh_shlibdeps:
+	# Upstream ships statically linked musl binaries — no shared library deps to analyze

@@ -1,0 +1,4 @@
+version=4
+opts="uversionmangle=s/^v//" \
+  https://github.com/sxyazi/yazi/releases \
+  .*/archive/refs/tags/v(\d[\d.]*)\.tar\.gz

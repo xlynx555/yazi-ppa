@@ -1,0 +1,7 @@
+yazi (26.1.22-1~ppa1~noble1) noble; urgency=medium
+
+  * Initial packaging for Ubuntu PPA.
+  * Packages official upstream pre-built musl static binaries.
+  * Supports amd64 and arm64 architectures.
+
+ -- Den Leschenko <den.leschenko@gmail.com>  Wed, 22 Jan 2026 12:00:00 +0000
