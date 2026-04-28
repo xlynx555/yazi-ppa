@@ -23,7 +23,7 @@ concurrency:
 env:
   # Space-separated list of Ubuntu series to publish to.
   # Primary series (first entry) is used for the committed changelog.
-  UBUNTU_SERIES: noble jammy oracular
+  UBUNTU_SERIES: noble jammy oracular resolute
 
 jobs:
   # ── Stage 1: decide whether an update is needed ────────────────────────────

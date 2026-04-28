@@ -1,4 +1,4 @@
-yazi (26.1.22-1~ppa1~noble1) noble; urgency=medium
+yazi (26.1.20-1~ppa1~noble1) noble; urgency=medium
 
   * Initial packaging for Ubuntu PPA.
   * Packages official upstream pre-built musl static binaries.
