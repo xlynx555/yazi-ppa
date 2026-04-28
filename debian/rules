@@ -3,6 +3,9 @@ include /usr/share/dpkg/architecture.mk
 
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
+# Strip any ~ppa… / +… suffix to get the bare upstream version (e.g. 26.1.22).
+UPSTREAM_VERSION := $(shell dpkg-parsechangelog -Sversion | sed 's/[~+].*//')
+
 %:
 	dh $@
 
@@ -10,10 +13,14 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	case "$(DEB_HOST_ARCH)" in \
-		amd64) unzip -o yazi-x86_64-unknown-linux-musl.zip ;; \
-		arm64) unzip -o yazi-aarch64-unknown-linux-musl.zip ;; \
+		amd64) MUSL_ARCH=x86_64-unknown-linux-musl ;; \
+		arm64) MUSL_ARCH=aarch64-unknown-linux-musl ;; \
 		*) echo "Unsupported architecture: $(DEB_HOST_ARCH)" >&2; exit 1 ;; \
-	esac
+	esac; \
+	URL="https://github.com/sxyazi/yazi/releases/download/v$(UPSTREAM_VERSION)/yazi-$${MUSL_ARCH}.zip"; \
+	echo "Downloading $$URL"; \
+	curl -fsSL --retry 3 "$$URL" -o "yazi-$${MUSL_ARCH}.zip"; \
+	unzip -o "yazi-$${MUSL_ARCH}.zip"
 
 override_dh_auto_install:
 	set -e; \

@@ -1,18 +1,17 @@
 #!/bin/bash
 # update-changelog.sh — Insert a new version entry into debian/changelog.
-# Usage: ./scripts/update-changelog.sh <version> [distro] [ppa-revision]
-# Example: ./scripts/update-changelog.sh 26.1.22 noble 1
+# Usage: ./scripts/update-changelog.sh <version> [distro]
+# Example: ./scripts/update-changelog.sh 26.1.22
 #
-# The resulting version string will be:  <version>-<ppa-rev>~ppa1~<distro>1
-# e.g.  26.1.22-1~ppa1~noble1
+# The resulting version string will be:  <version>~ppa1
+# e.g.  26.1.22~ppa1
 
 set -euo pipefail
 
-VERSION="${1:?Usage: $0 <version> [distro] [ppa-revision]}"
+VERSION="${1:?Usage: $0 <version> [distro]}"
 DISTRO="${2:-noble}"
-PPA_REV="${3:-1}"
 
-DEB_VERSION="${VERSION}-${PPA_REV}~ppa1~${DISTRO}1"
+DEB_VERSION="${VERSION}~ppa1"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"

@@ -1,4 +1,4 @@
-name: Update Launchpad PPA
+name: Update PPA Changelog
 
 on:
   schedule:
@@ -10,36 +10,20 @@ on:
         description: 'Force a specific upstream version (without "v", e.g. 26.1.22). Leave empty for latest.'
         required: false
         default: ''
-      ppa_revision:
-        description: 'Debian revision suffix (default: 1, gives -1~ppa1~<series>1)'
-        required: false
-        default: '1'
 
-# Only one PPA-update run at a time.
+# Only one run at a time to avoid concurrent changelog commits.
 concurrency:
   group: update-ppa
   cancel-in-progress: false
 
-env:
-  # Space-separated list of Ubuntu series to publish to.
-  # Primary series (first entry) is used for the committed changelog.
-  UBUNTU_SERIES: noble jammy oracular resolute
-
 jobs:
-  # ── Stage 1: decide whether an update is needed ────────────────────────────
-  check-release:
+  check-and-update:
     runs-on: ubuntu-24.04
-    outputs:
-      version: ${{ steps.resolve.outputs.version }}
-      needs_update: ${{ steps.compare.outputs.needs_update }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install devscripts
-        run: sudo apt-get install -y --no-install-recommends devscripts
-
-      - name: Get latest upstream release tag
+      - name: Get latest upstream release
         id: upstream
         run: |
           TAG=$(curl -fsSL \
@@ -56,105 +40,45 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Target version: ${VERSION}"
 
-      - name: Get currently packaged version
+      - name: Get current packaged version
         id: current
         run: |
-          V=$(dpkg-parsechangelog -Sversion | sed 's/-.*//')
+          # Extract the bare upstream version from the changelog (strip ~ppa... suffix)
+          V=$(dpkg-parsechangelog -Sversion | sed 's/[~+].*//')
           echo "version=${V}" >> "$GITHUB_OUTPUT"
           echo "Packaged version: ${V}"
 
-      - name: Determine whether update is needed
-        id: compare
+      - name: Check if update is needed
+        id: check
         run: |
           TARGET="${{ steps.resolve.outputs.version }}"
           CURRENT="${{ steps.current.outputs.version }}"
           FORCED="${{ github.event.inputs.force_version }}"
           if [ "${TARGET}" != "${CURRENT}" ] || [ -n "${FORCED}" ]; then
-            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
             echo "Update required: ${CURRENT} → ${TARGET}"
           else
-            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
             echo "Already up to date (${CURRENT})."
           fi
 
-  # ── Stage 2: build source packages and upload to Launchpad ─────────────────
-  build-and-upload:
-    needs: check-release
-    if: needs.check-release.outputs.needs_update == 'true'
-    runs-on: ubuntu-24.04
+      - name: Install devscripts
+        if: steps.check.outputs.needed == 'true'
+        run: sudo apt-get install -y --no-install-recommends devscripts
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            devscripts \
-            dpkg-dev \
-            debhelper \
-            dput \
-            gnupg \
-            unzip \
-            curl \
-            jq
-
-      - name: Import GPG signing key
+      - name: Update changelog
+        if: steps.check.outputs.needed == 'true'
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        run: |
-          echo "${GPG_PRIVATE_KEY}" | base64 -d | gpg --batch --import
-          # Derive the fingerprint from the imported key (strips any spaces the
-          # secret may contain) and mark it as ultimately trusted.
-          FINGERPRINT=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
-          echo "${FINGERPRINT}:6:" | gpg --import-ownertrust
-
-      - name: Create orig tarball
-        env:
-          VERSION: ${{ needs.check-release.outputs.version }}
-        run: ./scripts/create-orig-tarball.sh "${VERSION}"
-
-      - name: Build and upload source package for each series
-        env:
-          VERSION: ${{ needs.check-release.outputs.version }}
-          PPA_REVISION: ${{ github.event.inputs.ppa_revision || '1' }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-          LAUNCHPAD_PPA: ${{ secrets.LAUNCHPAD_PPA }}
+          VERSION: ${{ steps.resolve.outputs.version }}
           DEBFULLNAME: ${{ secrets.DEBFULLNAME }}
           DEBEMAIL: ${{ secrets.DEBEMAIL }}
+        run: ./scripts/update-changelog.sh "${VERSION}"
+
+      - name: Commit and push
+        if: steps.check.outputs.needed == 'true'
         run: |
-          for SERIES in ${UBUNTU_SERIES}; do
-            echo "━━━ Building for ${SERIES} ━━━"
-
-            # Write a fresh per-series changelog entry
-            ./scripts/update-changelog.sh "${VERSION}" "${SERIES}" "${PPA_REVISION}"
-
-            # Build a signed, source-only package (include orig with -sa)
-            dpkg-buildpackage -S -sa -k"${GPG_KEY_ID}"
-
-            # Locate the freshly created .changes file and upload
-            CHANGES_FILE=$(ls -t ../*_source.changes | head -1)
-            echo "Uploading ${CHANGES_FILE} to ${LAUNCHPAD_PPA}..."
-            dput "${LAUNCHPAD_PPA}" "${CHANGES_FILE}"
-
-            # Reset changelog so the next series starts from a clean slate
-            git checkout -- debian/changelog
-
-            echo "Done for ${SERIES}."
-          done
-
-      - name: Commit updated changelog for primary series
-        env:
-          VERSION: ${{ needs.check-release.outputs.version }}
-          PPA_REVISION: ${{ github.event.inputs.ppa_revision || '1' }}
-          DEBFULLNAME: ${{ secrets.DEBFULLNAME }}
-          DEBEMAIL: ${{ secrets.DEBEMAIL }}
-        run: |
-          PRIMARY_SERIES=$(echo ${UBUNTU_SERIES} | awk '{print $1}')
-          ./scripts/update-changelog.sh "${VERSION}" "${PRIMARY_SERIES}" "${PPA_REVISION}"
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add debian/changelog
-          git commit -m "chore: update to yazi ${VERSION}"
+          git commit -m "chore: update to yazi ${{ steps.resolve.outputs.version }}"
           git push
