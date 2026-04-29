@@ -1,3 +1,9 @@
+yazi (26.1.22~ppa1) noble; urgency=medium
+
+  * New upstream release 26.1.22.
+
+ -- den-leschenko <den.leschenko@gmail.com >  Wed, 29 Apr 2026 00:03:02 +0000
+
 yazi (26.1.20~ppa1) noble; urgency=medium
 
   * Initial packaging for Ubuntu PPA.
